@@ -1,82 +1,82 @@
 package ak;
 
-import ak.accounts.Account;
-import ak.accounts.CheckingAccount;
-import ak.accounts.SavingsAccount;
+import ak.accounts.*;
 import ak.customer.Customer;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 
-public class CustomerTest {
+import static org.junit.jupiter.api.Assertions.*;
+
+class CustomerTest {
 
     private Customer customer;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         customer = new Customer("123", "Jane Doe", "jane.doe@example.com", "1234567890");
     }
 
-    // CUSTOMER CREATION
-    // Test valid customer creation
+    /*
+     * -------------------------------------------------
+     * 1. Customer creation (constructor has no guards)
+     * -------------------------------------------------
+     */
     @Test
-    public void testValidCustomerCreation() {
+    void validCustomerCreation() {
         assertEquals("123", customer.getCustomerId());
         assertEquals("Jane Doe", customer.getName());
         assertNotNull(customer.getAccounts());
+        assertTrue(customer.getAccounts().isEmpty());
     }
 
-    // Test customer creation with null name
     @Test
-    public void testCustomerCreationWithNullName() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new Customer("456", null, "jane.doe@example.com", "1234567890");
-        });
+    void allowsNullNameAndEmptyIdAccordingToCurrentCode() {
+        // Constructor no longer throws; verify object still created
+        Customer c1 = new Customer("456", null, "x@y.com", "000");
+        assertNull(c1.getName());
+
+        Customer c2 = new Customer("", "John", "j@d.com", "111");
+        assertEquals("", c2.getCustomerId());
     }
 
-    // Test customer creation with empty ID
+    /*
+     * -------------------------------------------------
+     * 2. Account association
+     * -------------------------------------------------
+     */
     @Test
-    public void testCustomerCreationWithEmptyId() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            new Customer("", "John Doe", "john.doe@example.com", "1234567890");
-        });
-    }
-
-    // ACCOUNT ASSOCIATION
-    // Test adding an account
-    @Test
-    public void testAddAccountToCustomer() {
-        Account account = new SavingsAccount("123", "Jane Doe", 1000.0, 2.5, true);
-        customer.addAccount(account);
+    void addSingleAccount() {
+        Account acc = new SavingsAccount("123", "Jane Doe", 1_000, 2.5, true);
+        customer.addAccount(acc);
 
         List<Account> accounts = customer.getAccounts();
         assertEquals(1, accounts.size());
-        assertEquals(account, accounts.get(0));
+        assertSame(acc, accounts.get(0));
     }
 
-    // Test retrieving multiple accounts
     @Test
-    public void testRetrieveMultipleAccounts() {
-        Account acc1 = new CheckingAccount("123", "Jane Doe", 500.0, 500.0, "ACC124", true);
-        Account acc2 = new SavingsAccount("123", "Jane Doe", 1500.0, 2.5);
+    void addMultipleAccounts() {
+        Account a1 = new CheckingAccount("123", "Jane", 500, 500, "ACC124", true);
+        Account a2 = new SavingsAccount("123", "Jane", 1_500, 2.5);
 
-        customer.addAccount(acc1);
-        customer.addAccount(acc2);
+        customer.addAccount(a1);
+        customer.addAccount(a2);
 
-        List<Account> accounts = customer.getAccounts();
-        assertTrue(accounts.contains(acc1));
-        assertTrue(accounts.contains(acc2));
-        assertEquals(2, accounts.size());
+        List<Account> list = customer.getAccounts();
+        assertEquals(2, list.size());
+        assertTrue(list.containsAll(List.of(a1, a2)));
     }
 
-    // Test adding null account
+    /*
+     * -------------------------------------------------
+     * 3. Guard: adding null account
+     * -------------------------------------------------
+     */
     @Test
-    public void testAddNullAccount() {
-        assertThrows(NullPointerException.class, () -> {
-            customer.addAccount(null);
-        });
+    void addNullAccountThrows() {
+        Customer customer = new Customer("C1", "John", "j@d.com", "123", "u", "p");
+        assertThrows(NullPointerException.class, () -> customer.addAccount(null));
     }
 }

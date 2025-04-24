@@ -2,39 +2,45 @@ package ak;
 
 import ak.customer.Customer;
 import ak.loans.Loan;
-
 import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-public class LoanTest {
+class LoanTest {
 
+    /* -------------------------------------------------
+       1. Happy‑path construction
+       ------------------------------------------------- */
     @Test
-    public void testValidLoanCreation() {
-        Customer customer = new Customer("123", "Nour", "nour@example.com", "1234567890");
-        Loan loan = new Loan("LOAN123", customer.getCustomerId(), "ACC123", 10000.0, 0.05, 12);
+    void validLoanCreation() {
+        Customer cust = new Customer("123", "Nour", "nour@example.com", "1234567890");
+        Loan loan = new Loan("LOAN123", cust.getCustomerId(),
+                             "ACC123", 10_000, 0.05, 12);
 
-        assertEquals(customer.getCustomerId(), loan.getCustomerId());
-        assertEquals(10000.0, loan.getLoanAmount(), 0.01);
-        assertEquals(0.05, loan.getInterestRate(), 0.01);
-        assertEquals(12, loan.getDurationInMonths());
+        assertAll(
+            () -> assertEquals(cust.getCustomerId(), loan.getCustomerId()),
+            () -> assertEquals(10_000, loan.getLoanAmount(), 0.01),
+            () -> assertEquals(0.05,   loan.getInterestRate(), 0.00001),
+            () -> assertEquals(12,     loan.getDurationInMonths())
+        );
+    }
+
+    /* -------------------------------------------------
+       2. Validation failures in constructor
+       ------------------------------------------------- */
+    @Test
+    void negativeAmountThrowsIllegalArgument() {
+        Customer cust = new Customer("123", "Nour", "nour@example.com", "1234567890");
+
+        assertThrows(IllegalArgumentException.class,
+            () -> new Loan("LOAN123", cust.getCustomerId(),
+                           "ACC123", -5_000, 0.05, 12));
     }
 
     @Test
-    public void testLoanWithNegativeAmountThrowsException() {
-        Customer customer = new Customer("123", "Nour", "nour@example.com", "1234567890");
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            new Loan("LOAN123", customer.getCustomerId(), "ACC123", -5000.0, 0.05, 12);
-        });
+    void nullCustomerIdThrowsIllegalArgument() {
+        assertThrows(IllegalArgumentException.class,
+            () -> new Loan("LOAN123", null,
+                           "ACC123", 5_000, 0.05, 12));
     }
-
-    @Test
-    public void testLoanWithNullCustomerThrowsException() {
-        assertThrows(NullPointerException.class, () -> {
-            new Loan("LOAN123", null, "ACC123", 5000.0, 0.05, 12);
-        });
-    }
-
-    // Since the Loan class does not have repayment methods, we cannot test repayment logic here.
-    // These tests should be moved to LoanProcessorTest if LoanProcessor handles repayments.
 }

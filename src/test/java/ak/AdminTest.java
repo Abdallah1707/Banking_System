@@ -5,24 +5,71 @@ import ak.customer.Customer;
 import ak.accounts.Account;
 import ak.accounts.AccountManager;
 import ak.customer.CustomerManager;
+import ak.database.DBconnection;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
 public class AdminTest {
     private Admin admin;
     private CustomerManager customerManager;
     private AccountManager accountManager;
+    private Connection testConnection;
 
     @BeforeEach
-    public void setUp() {
-        admin = new Admin("adminId", "Admin Name", "adminUsername", "passwordHash");
+    public void setUp() throws SQLException {
+        // Set up test database connection
+        testConnection = DriverManager.getConnection("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1");
+        DBconnection.setTestConnection(testConnection);
+
+        // Create necessary tables
+        try (Statement stmt = testConnection.createStatement()) {
+            stmt.execute("""
+                        CREATE TABLE IF NOT EXISTS customers (
+                            customer_id VARCHAR(50) PRIMARY KEY,
+                            name VARCHAR(100),
+                            email VARCHAR(100),
+                            phone_number VARCHAR(20),
+                            username VARCHAR(50),
+                            password_hash VARCHAR(100)
+                        )
+                    """);
+            stmt.execute("""
+                        CREATE TABLE IF NOT EXISTS accounts (
+                            account_number VARCHAR(50) PRIMARY KEY,
+                            customer_id VARCHAR(50),
+                            holder_name VARCHAR(100),
+                            balance DECIMAL(15,2),
+                            account_type VARCHAR(20),
+                            interest_rate DECIMAL(5,2),
+                            overdraft_limit DECIMAL(15,2),
+                            is_active BOOLEAN
+                        )
+                    """);
+        }
+
+        DBconnection.clearDatabase(); // Clear the database before each test
+
         customerManager = new CustomerManager();
         accountManager = new AccountManager();
+        admin = new Admin("adminId", "Admin Name", "adminUsername", "passwordHash");
         admin.setCustomerManager(customerManager);
         admin.setAccountManager(accountManager);
+    }
+
+    @AfterEach
+    public void tearDown() throws SQLException {
+        if (testConnection != null) {
+            testConnection.close();
+        }
+        DBconnection.setTestConnection(null);
     }
 
     @Test

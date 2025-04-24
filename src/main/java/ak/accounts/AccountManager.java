@@ -12,7 +12,7 @@ public class AccountManager {
     public AccountManager() {
         try {
             this.connection = DBconnection.getConnection();
-            // initializeDatabase();
+            initializeDatabase();
         } catch (SQLException e) {
             System.err.println("Database connection error: " + e.getMessage());
             throw new RuntimeException("Failed to initialize AccountManager", e);
@@ -168,7 +168,7 @@ public class AccountManager {
                 double interestRate = rs.getDouble("interest_rate");
                 String customerId = rs.getString("customer_id");
     
-                SavingsAccount account = new SavingsAccount(customerId, accountNumber, balance, interestRate , rs.getBoolean("activated"));
+                SavingsAccount account = new SavingsAccount(customerId, accountNumber, balance, interestRate);
                 account.addInterest();
     
                 updateAccountBalance(account);
@@ -214,7 +214,7 @@ public Account getAccountByNumber(String accountNumber) {
             Account account;
             if ("Savings".equalsIgnoreCase(accountType)) {
                 double interestRate = rs.getDouble("interest_rate");
-                account = new SavingsAccount(customerId, accountHolderName, balance, interestRate , accountNumber , rs.getBoolean("activated"));
+                account = new SavingsAccount(customerId, accountHolderName, balance, interestRate);
             } else if ("Checking".equalsIgnoreCase(accountType)) {
                 double overdraftLimit = rs.getDouble("overdraft_limit");
                 account = new CheckingAccount(customerId, accountHolderName, balance, overdraftLimit , accountNumber , rs.getBoolean("activated"));
@@ -265,7 +265,6 @@ public Account getAccountByNumber(String accountNumber) {
                         rs.getString("account_holder_name"),
                         rs.getDouble("balance"),
                         rs.getDouble("interest_rate"),
-                        rs.getString("account_number"),
                         rs.getBoolean("activated")
                     ));
                 } else if ("Checking".equalsIgnoreCase(accountType)) {
@@ -297,9 +296,7 @@ public Account getAccountByNumber(String accountNumber) {
                         rs.getString("customer_id"),
                         rs.getString("account_holder_name"),
                         rs.getDouble("balance"),
-                        rs.getDouble("interest_rate"),
-                        rs.getString("account_number"),
-                        rs.getBoolean("activated")
+                        rs.getDouble("interest_rate")
                     ));
                 } else if ("Checking".equalsIgnoreCase(accountType)) {
                     accounts.add(new CheckingAccount(
@@ -332,26 +329,6 @@ public Account getAccountByNumber(String accountNumber) {
             return false;
         }
     }
-
-
-    public boolean isAccountOwnedByCustomer(String accountNumber, String customerId) {
-        String sql = "SELECT COUNT(*) FROM accounts WHERE account_number = ? AND customer_id = ?";
-        try (Connection conn = DBconnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, accountNumber);
-            pstmt.setString(2, customerId);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1) > 0; // Return true if the count is greater than 0
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false; // Return false if an error occurs or the account does not belong to the customer
-    }
-
-
-
 
 
 }

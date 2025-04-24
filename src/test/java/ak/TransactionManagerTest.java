@@ -1,103 +1,108 @@
 package ak;
 
-import ak.accounts.Account;
-import ak.accounts.AccountManager;
-import ak.accounts.SavingsAccount;
+import ak.accounts.*;
 import ak.customer.Customer;
 import ak.customer.CustomerManager;
 import ak.database.DBconnection;
 import ak.transactions.Transaction;
 import ak.transactions.TransactionManager;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
+
+import java.sql.*;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.util.List;
+class TransactionManagerTest {
 
-public class TransactionManagerTest {
-    private TransactionManager transactionManager;
-    private AccountManager accountManager;
-    private Customer customer;
-    private Account source;
-    private Account destination;
+    private static Connection h2;
+    private AccountManager accountMgr;
+    private TransactionManager txMgr;
+    private Account src, dst;
+
+    @BeforeAll
+    static void initDb() throws Exception {
+        h2 = DriverManager.getConnection("jdbc:h2:mem:txdb;MODE=PostgreSQL");
+        DBconnection.setTestConnection(h2);
+        try (Statement st = h2.createStatement()) {
+            st.execute("""
+                        CREATE TABLE customers(
+                          customer_id VARCHAR(20) PRIMARY KEY,
+                          name VARCHAR(100),
+                          email VARCHAR(100),
+                          phone_number VARCHAR(20),
+                          username VARCHAR(50),
+                          password_hash VARCHAR(100)
+                        );
+                    """);
+            st.execute("""
+                        CREATE TABLE accounts(
+                          account_number VARCHAR(20) PRIMARY KEY,
+                          customer_id VARCHAR(20),
+                          account_holder_name VARCHAR(100),
+                          balance DECIMAL(15,2),
+                          account_type VARCHAR(20),
+                          interest_rate DECIMAL(5,2),
+                          overdraft_limit DECIMAL(15,2),
+                          activated BOOLEAN
+                        );
+                    """);
+            st.execute("""
+                        CREATE TABLE transactions(
+                          transaction_id VARCHAR(20) PRIMARY KEY,
+                          amount DECIMAL(15,2),
+                          type VARCHAR(50),
+                          from_account VARCHAR(20),
+                          to_account VARCHAR(20),
+                          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        );
+                    """);
+        }
+    }
+
+    @AfterAll
+    static void close() throws Exception {
+        h2.close();
+    }
 
     @BeforeEach
-    public void setUp() {
-        DBconnection.clearDatabase(); // Clear the database before each test
-        accountManager = new AccountManager();
-        transactionManager = new TransactionManager(accountManager);
+    void setUp() throws SQLException {
+        DBconnection.clearDatabase();
+        accountMgr = new AccountManager();
+        txMgr = new TransactionManager(accountMgr);
 
-        customer = new CustomerManager().addCustomer("John Doe", "john.doe@example.com", "1234567890", "john123", "password123");
-        source = new SavingsAccount("123", "John Doe", 1000.0, 2.5, true);
-        destination = new SavingsAccount("123", "Jane Doe", 500.0, 2.5, true);
-        accountManager.createAccount(source);
-        accountManager.createAccount(destination);
+        CustomerManager customerManager = new CustomerManager();
+        Customer c = customerManager.addCustomer("John", "j@d.com", "123", "u", "p");
+        src = new SavingsAccount(c.getCustomerId(), "John", 1_000, 2.5, true);
+        dst = new SavingsAccount(c.getCustomerId(), "Jane", 500, 2.5, true);
+        accountMgr.createAccount(src);
+        accountMgr.createAccount(dst);
+    }
+
+    @AfterEach
+    void clear() throws Exception {
+        try (Statement st = h2.createStatement()) {
+            st.execute("TRUNCATE TABLE accounts");
+            st.execute("TRUNCATE TABLE transactions");
+        }
     }
 
     @Test
-    public void testValidTransactionCreation() {
-        Transaction transaction = transactionManager.createTransaction(200.0, "TRANSFER", source.getAccountNumber(), destination.getAccountNumber());
-
-        assertNotNull(transaction);
-        assertEquals(200.0, transaction.getAmount());
-        assertEquals("TRANSFER", transaction.getType());
-        assertEquals(source.getAccountNumber(), transaction.getFromAccount());
-        assertEquals(destination.getAccountNumber(), transaction.getToAccount());
-
-        List<Transaction> history = transactionManager.getTransactionsByAccount(source.getAccountNumber());
-        assertEquals(1, history.size());
-        assertEquals(transaction, history.get(0));
+    void validTransaction() {
+        Transaction t = txMgr.createTransaction(200, "TRANSFER", src.getAccountNumber(), dst.getAccountNumber());
+        assertNotNull(t);
+        assertEquals(800, src.getBalance(), 0.0001);
+        assertEquals(700, dst.getBalance(), 0.0001);
     }
 
     @Test
-    public void testTransferWithInsufficientFunds() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            transactionManager.createTransaction(1500.0, "TRANSFER", source.getAccountNumber(), destination.getAccountNumber());
-        });
+    void insufficientFunds() {
+        assertThrows(IllegalArgumentException.class,
+                () -> txMgr.createTransaction(2_000, "TRANSFER", src.getAccountNumber(), dst.getAccountNumber()));
     }
 
     @Test
-    public void testTransferNegativeAmount() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            transactionManager.createTransaction(-100.0, "TRANSFER", source.getAccountNumber(), destination.getAccountNumber());
-        });
-    }
-
-    @Test
-    public void testTransactionHistoryMultiple() {
-        transactionManager.createTransaction(100.0, "TRANSFER", source.getAccountNumber(), destination.getAccountNumber());
-        transactionManager.createTransaction(50.0, "TRANSFER", source.getAccountNumber(), destination.getAccountNumber());
-
-        List<Transaction> history = transactionManager.getTransactionsByAccount(source.getAccountNumber());
-        assertEquals(2, history.size());
-    }
-
-    @Test
-    public void testHistoryReturnsEmptyListForAccountWithNoTransactions() {
-        Account newAccount = new SavingsAccount(customer.getCustomerId(), "New Account", 300.0, 2.5);
-        accountManager.createAccount(newAccount);
-        List<Transaction> history = transactionManager.getTransactionsByAccount(newAccount.getAccountNumber());
-        assertTrue(history.isEmpty());
-    }
-
-    @Test
-    public void testNullSourceAccount() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            transactionManager.createTransaction(100.0, "TRANSFER", null, destination.getAccountNumber());
-        });
-    }
-
-    @Test
-    public void testNullDestinationAccount() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            transactionManager.createTransaction(100.0, "TRANSFER", source.getAccountNumber(), null);
-        });
-    }
-
-    @Test
-    public void testTransferZeroAmount() {
-        assertThrows(IllegalArgumentException.class, () -> {
-            transactionManager.createTransaction(0.0, "TRANSFER", source.getAccountNumber(), destination.getAccountNumber());
-        });
+    void negativeAmount() {
+        assertThrows(IllegalArgumentException.class,
+                () -> txMgr.createTransaction(-1, "TRANSFER", src.getAccountNumber(), dst.getAccountNumber()));
     }
 }

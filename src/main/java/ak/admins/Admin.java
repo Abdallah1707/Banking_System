@@ -51,7 +51,6 @@ public class Admin {
         this.accountManager = accountManager;
     }
 
-
     // Admin functionality
     public List<Customer> getAllCustomers() {
         return customerManager.getAllCustomers();

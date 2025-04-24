@@ -9,24 +9,45 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class AdminManager {
+    private Connection connection;
+
+    public AdminManager() {
+        try {
+            this.connection = DBconnection.getConnection();
+            initializeDatabase();
+        } catch (SQLException e) {
+            System.err.println("Database connection error: " + e.getMessage());
+            throw new RuntimeException("Failed to initialize AdminManager", e);
+        }
+    }
+
+    private void initializeDatabase() throws SQLException {
+        String createTableSQL = "CREATE TABLE IF NOT EXISTS admins (" +
+                "admin_id VARCHAR(20) PRIMARY KEY, " +
+                "name VARCHAR(100) NOT NULL, " +
+                "username VARCHAR(50) UNIQUE NOT NULL, " +
+                "password_hash VARCHAR(100) NOT NULL)";
+        try (Statement stmt = connection.createStatement()) {
+            stmt.execute(createTableSQL);
+        }
+    }
 
     // Authenticate an admin by username and password
     public Admin authenticateAdmin(String username, String passwordHash) {
         String sql = "SELECT * FROM admins WHERE username = ? AND password_hash = ?";
-        try (Connection conn = DBconnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, username);
             pstmt.setString(2, passwordHash);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
                 return new Admin(
-                    rs.getString("admin_id"),
-                    rs.getString("name"),
-                    rs.getString("username"),
-                    rs.getString("password_hash")
-                );
+                        rs.getString("admin_id"),
+                        rs.getString("name"),
+                        rs.getString("username"),
+                        rs.getString("password_hash"));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -38,8 +59,7 @@ public class AdminManager {
     public boolean addAdmin(String name, String username, String passwordHash) {
         String sql = "INSERT INTO admins (admin_id, name, username, password_hash) VALUES (?, ?, ?, ?)";
         String adminId = "ADMIN-" + java.util.UUID.randomUUID().toString().substring(0, 8);
-        try (Connection conn = DBconnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, adminId);
             pstmt.setString(2, name);
             pstmt.setString(3, username);
@@ -54,17 +74,15 @@ public class AdminManager {
     // Retrieve an admin by username
     public Admin getAdminByUsername(String username) {
         String sql = "SELECT * FROM admins WHERE username = ?";
-        try (Connection conn = DBconnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, username);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
                 return new Admin(
-                    rs.getString("admin_id"),
-                    rs.getString("name"),
-                    rs.getString("username"),
-                    rs.getString("password_hash")
-                );
+                        rs.getString("admin_id"),
+                        rs.getString("name"),
+                        rs.getString("username"),
+                        rs.getString("password_hash"));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -72,6 +90,4 @@ public class AdminManager {
         return null;
     }
 
-
-    
 }

@@ -10,7 +10,11 @@ public abstract class Account {
     protected String customerId; // New field for customer ID
     static int accountID = 1;
 
-    public Account(String customerId, String accountHolderName, double initialBalance, String accountNumber , boolean activated) {
+    public Account(String customerId, String accountHolderName, double initialBalance, String accountNumber,
+            boolean activated) {
+        if (initialBalance < 0) {
+            throw new IllegalArgumentException("Initial balance cannot be negative");
+        }
         this.activated = activated;
         this.customerId = customerId;
         this.accountHolderName = accountHolderName;
@@ -18,13 +22,17 @@ public abstract class Account {
             this.accountNumber = accountNumber;
         } else {
             this.accountNumber = generateAccountNumber();
-        }             
+        }
         this.balance = initialBalance;
     }
-    public Account(String customerId, String accountHolderName, double initialBalance , boolean activated) {
+
+    public Account(String customerId, String accountHolderName, double initialBalance, boolean activated) {
+        if (initialBalance < 0) {
+            throw new IllegalArgumentException("Initial balance cannot be negative");
+        }
         this.activated = activated;
         this.customerId = customerId;
-        this.accountHolderName = accountHolderName;            
+        this.accountHolderName = accountHolderName;
         this.accountNumber = generateAccountNumber();
         this.balance = initialBalance;
     }
@@ -36,10 +44,11 @@ public abstract class Account {
     public abstract void withdraw(double amount);
 
     public void deposit(double amount) {
-        if (amount > 0) {
-            balance += amount;
-            System.out.println("Deposited $" + amount + " to " + accountNumber);
+        if (amount <= 0) {
+            throw new IllegalArgumentException("Deposit amount must be positive");
         }
+        balance += amount;
+        System.out.println("Deposited $" + amount + " to " + accountNumber);
     }
 
     public double getBalance() {
@@ -62,8 +71,8 @@ public abstract class Account {
         return this.getClass().getSimpleName();
     }
 
-     // Getter and Setter for activated
-     public boolean isActivated() {
+    // Getter and Setter for activated
+    public boolean isActivated() {
         return activated;
     }
 

@@ -2,47 +2,90 @@ package ak;
 
 import ak.admins.Admin;
 import ak.admins.AdminManager;
-// import ak.customer.Customer;
-// import ak.accounts.Account;
-// import ak.accounts.AccountManager;
-// import ak.customer.CustomerManager;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import ak.database.DBconnection;
+import org.junit.jupiter.api.*;
+
+import java.sql.*;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.sql.SQLException;
-import java.util.List;
+class AdminManagerTest {
 
-public class AdminManagerTest {
-    private AdminManager adminManager;
-    private Admin admin;
+    private static Connection h2;
+    private AdminManager adminMgr;
+
+    @BeforeAll
+    static void initDb() throws Exception {
+        // Set up H2 in-memory database
+        h2 = DriverManager.getConnection("jdbc:h2:mem:admindb;MODE=PostgreSQL");
+        DBconnection.setTestConnection(h2); // Use H2 for testing
+
+        try (Statement st = h2.createStatement()) {
+            st.execute("""
+                        CREATE TABLE IF NOT EXISTS admins(
+                          admin_id      VARCHAR(50) PRIMARY KEY,
+                          name          VARCHAR(50),
+                          username      VARCHAR(50) UNIQUE,
+                          password_hash VARCHAR(100)
+                        )
+                    """);
+            st.execute("""
+                        CREATE TABLE IF NOT EXISTS customers(
+                          customer_id VARCHAR(50) PRIMARY KEY,
+                          name VARCHAR(100),
+                          email VARCHAR(100),
+                          phone_number VARCHAR(20),
+                          username VARCHAR(50),
+                          password_hash VARCHAR(100)
+                        )
+                    """);
+            st.execute("""
+                        CREATE TABLE IF NOT EXISTS accounts(
+                          account_number VARCHAR(50) PRIMARY KEY,
+                          customer_id VARCHAR(50),
+                          holder_name VARCHAR(100),
+                          balance DECIMAL(15,2),
+                          account_type VARCHAR(20),
+                          interest_rate DECIMAL(5,2),
+                          overdraft_limit DECIMAL(15,2),
+                          is_active BOOLEAN
+                        )
+                    """);
+        }
+    }
+
+    @AfterAll
+    static void close() throws Exception {
+        if (h2 != null && !h2.isClosed()) {
+            h2.close();
+        }
+    }
 
     @BeforeEach
-    public void setUp() throws SQLException {
-        adminManager = new AdminManager();
-        
-        // Assuming you have a method to add an admin to the database for testing
-        // testing purposes. You need to implement this based on your DB schema.
-        adminManager.addAdmin("Test Admin", "testAdminUsername", "testPasswordHash");
-        
-        admin = adminManager.getAdminByUsername("testAdminUsername");
+    void setUp() throws SQLException {
+        DBconnection.clearDatabase(); // Clear database before each test
+        adminMgr = new AdminManager();
+        adminMgr.addAdmin("Test Admin", "testAdminUsername", "testPasswordHash");
+    }
+
+    @AfterEach
+    void clean() throws SQLException {
+        DBconnection.clearDatabase(); // Clear database after each test
     }
 
     @Test
-    public void testAuthenticateAdmin() {
-        Admin authenticatedAdmin = adminManager.authenticateAdmin("testAdminUsername", "testPasswordHash");
-        assertNotNull(authenticatedAdmin);
+    void authenticateAdmin() {
+        Admin a = adminMgr.authenticateAdmin("testAdminUsername", "testPasswordHash");
+        assertNotNull(a);
     }
 
     @Test
-    public void testAddAdmin() {
-        boolean result = adminManager.addAdmin("New Admin", "newAdminUsername", "newPasswordHash");
-        assertTrue(result);
+    void addAdmin() {
+        assertTrue(adminMgr.addAdmin("New", "newU", "newP"));
     }
 
     @Test
-    public void testGetAdminByUsername() {
-        Admin retrievedAdmin = adminManager.getAdminByUsername("testAdminUsername");
-        assertNotNull(retrievedAdmin);
+    void getAdminByUsername() {
+        assertNotNull(adminMgr.getAdminByUsername("testAdminUsername"));
     }
 }

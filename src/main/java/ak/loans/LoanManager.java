@@ -8,6 +8,7 @@ import java.util.List;
 public class LoanManager {
 
     private Connection connection;
+
     public LoanManager() {
         try {
             this.connection = DBconnection.getConnection();
@@ -28,7 +29,6 @@ public class LoanManager {
                 + "duration_months INTEGER NOT NULL, "
                 + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
                 + "FOREIGN KEY (customer_id) REFERENCES customers(customer_id))";
-        
 
         try (Statement stmt = connection.createStatement()) {
             stmt.execute(createTableSQL);
@@ -36,11 +36,11 @@ public class LoanManager {
     }
 
     public Loan createLoan(String customerId, String accountNumber, double loanAmount,
-                           double interestRate, int durationInMonths) {
+            double interestRate, int durationInMonths) {
         validateLoanParameters(loanAmount, interestRate, durationInMonths);
 
         String sql = "INSERT INTO loans (loan_id, customer_id, account_number, loan_amount, interest_rate, duration_months) "
-                   + "VALUES (?, ?, ?, ?, ?, ?)";
+                + "VALUES (?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             Loan newLoan = new Loan(customerId, accountNumber, loanAmount, interestRate, durationInMonths);
@@ -62,9 +62,12 @@ public class LoanManager {
     }
 
     private void validateLoanParameters(double amount, double rate, int duration) {
-        if (amount <= 0) throw new IllegalArgumentException("Loan amount must be positive");
-        if (rate <= 0) throw new IllegalArgumentException("Interest rate must be positive");
-        if (duration <= 0) throw new IllegalArgumentException("Loan duration must be positive");
+        if (amount <= 0)
+            throw new IllegalArgumentException("Loan amount must be positive");
+        if (rate <= 0)
+            throw new IllegalArgumentException("Interest rate must be positive");
+        if (duration <= 0)
+            throw new IllegalArgumentException("Loan duration must be positive");
     }
 
     public Loan getLoanById(String loanId) {
@@ -107,7 +110,7 @@ public class LoanManager {
         List<Loan> loans = new ArrayList<>();
 
         try (Statement stmt = connection.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+                ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
                 loans.add(mapResultSetToLoan(rs));
@@ -121,13 +124,12 @@ public class LoanManager {
 
     private Loan mapResultSetToLoan(ResultSet rs) throws SQLException {
         return new Loan(
-            rs.getString("loan_id"),
-            rs.getString("customer_id"),
-            rs.getString("account_number"), // Map account number
-            rs.getDouble("loan_amount"),
-            rs.getDouble("interest_rate"),
-            rs.getInt("duration_months")
-        );
+                rs.getString("loan_id"),
+                rs.getString("customer_id"),
+                rs.getString("account_number"), // Map account number
+                rs.getDouble("loan_amount"),
+                rs.getDouble("interest_rate"),
+                rs.getInt("duration_months"));
     }
 
     public boolean removeLoan(String loanId) {
@@ -161,7 +163,7 @@ public class LoanManager {
             System.out.println("No loans found for customer: " + customerId);
             return;
         }
-    
+
         System.out.println("\nLoans for customer " + customerId + ":");
         System.out.println("--------------------------------");
         loans.forEach(Loan::printLoanDetails);

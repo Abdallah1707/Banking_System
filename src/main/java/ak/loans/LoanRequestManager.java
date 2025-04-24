@@ -15,7 +15,7 @@ public class LoanRequestManager {
     public boolean submitLoanRequest(String accountNumber, double loanAmount, String loanReason) {
         String sql = "INSERT INTO loan_requests (account_number, loan_amount, loan_reason, status) VALUES (?, ?, ?, 'Pending')";
         try (Connection conn = DBconnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, accountNumber);
             pstmt.setDouble(2, loanAmount);
             pstmt.setString(3, loanReason);
@@ -26,22 +26,19 @@ public class LoanRequestManager {
         }
     }
 
-
-
     public List<LoanRequest> getAllLoanRequests() {
         List<LoanRequest> loanRequests = new ArrayList<>();
         String sql = "SELECT * FROM loan_requests";
         try (Connection conn = DBconnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 loanRequests.add(new LoanRequest(
-                    rs.getString("id"),
-                    rs.getString("account_number"),
-                    rs.getDouble("loan_amount"),
-                    rs.getString("loan_reason"),
-                    rs.getString("status")
-                ));
+                        rs.getString("id"),
+                        rs.getString("account_number"),
+                        rs.getDouble("loan_amount"),
+                        rs.getString("loan_reason"),
+                        rs.getString("status")));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -52,7 +49,7 @@ public class LoanRequestManager {
     public boolean updateLoanRequestStatus(String requestId, String status) {
         String sql = "UPDATE loan_requests SET status = ? WHERE id = ?";
         try (Connection conn = DBconnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, status);
             pstmt.setInt(2, Integer.parseInt(requestId));
             return pstmt.executeUpdate() > 0;

@@ -1,84 +1,69 @@
-import org.junit.jupiter.api.Test;
+package ak;
+
+import ak.database.DBconnection;
+import ak.loans.Loan;
+import ak.loans.LoanManager;
+import org.junit.jupiter.api.*;
+
+import java.sql.*;
+
 import static org.junit.jupiter.api.Assertions.*;
 
-public class LoanManagerTest {
+class LoanManagerTest {
 
-    //LOAN APPROVAL
-    @Test
-    public void testLoanApprovalWithHighCreditScore() {
-        Customer customer = new Customer("123", "Nour");
-        Loan loan = new Loan(customer, 5000.0, 0.06, 12);
-        LoanProcessor processor = new LoanProcessor();
+    private static Connection h2;
+    private LoanManager loanMgr;
 
-        processor.processLoanApplication(loan, 750, 50000); // high credit score + income
+    @BeforeAll
+    static void init() throws Exception {
+        h2 = DriverManager.getConnection("jdbc:h2:mem:loans;MODE=PostgreSQL");
+        DBconnection.setTestConnection(h2);
+        try (Statement st = h2.createStatement()) {
+            st.execute("""
+                CREATE TABLE loans(
+                  loan_id VARCHAR(20) PRIMARY KEY,
+                  customer_id VARCHAR(20),
+                  account_number VARCHAR(20),
+                  loan_amount DECIMAL(15,2),
+                  interest_rate DECIMAL(5,2),
+                  duration_months INT,
+                  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """);
+        }
+    }
 
-        assertTrue(loan.isApproved());
+    @AfterAll
+    static void close() throws Exception { h2.close(); }
+
+    @BeforeEach
+    void setUp() { loanMgr = new LoanManager(); }
+
+    @AfterEach
+    void clear() throws Exception {
+        try (Statement st = h2.createStatement()) { st.execute("TRUNCATE TABLE loans"); }
     }
 
     @Test
-    public void testLoanDenialWithLowCreditScore() {
-        Customer customer = new Customer("124", "Ahmed");
-        Loan loan = new Loan(customer, 8000.0, 0.09, 18);
-        LoanProcessor processor = new LoanProcessor();
-
-        processor.processLoanApplication(loan, 580, 40000); // low credit score
-
-        assertFalse(loan.isApproved());
+    void createLoan_persists() {
+        Loan l = loanMgr.createLoan("C1","A1",1_000,5,12);
+        assertNotNull(l);
+        try (ResultSet rs = h2.createStatement()
+                              .executeQuery("SELECT COUNT(*) FROM loans")) {
+            rs.next(); assertEquals(1, rs.getInt(1));
+        }
     }
 
     @Test
-    public void testLoanDenialWithLowIncome() {
-        Customer customer = new Customer("125", "Sarah");
-        Loan loan = new Loan(customer, 10000.0, 0.1, 24);
-        LoanProcessor processor = new LoanProcessor();
-
-        processor.processLoanApplication(loan, 720, 8000); // good credit score, low income
-
-        assertFalse(loan.isApproved());
+    void validationFails() {
+        assertThrows(IllegalArgumentException.class,
+            () -> loanMgr.createLoan("C1","A1",-1,5,12));
     }
 
     @Test
-    public void testLoanApprovalExactlyOnThreshold() {
-        Customer customer = new Customer("126", "Omar");
-        Loan loan = new Loan(customer, 4000.0, 0.07, 12);
-        LoanProcessor processor = new LoanProcessor();
-
-        processor.processLoanApplication(loan, 700, 20000); // exact threshold
-
-        assertTrue(loan.isApproved());
-    }
-
-    //EDGE CASES AND INVALID INPUTS
-    @Test
-    public void testLoanWithNullCustomer() {
-        assertThrows(NullPointerException.class, () -> {
-            Loan loan = new Loan(null, 5000.0, 0.05, 12);
-        }); 
-    }
-
-    @Test
-    public void testLoanWithNegativeAmount() {
-        Customer customer = new Customer("127", "Layla");
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            Loan loan = new Loan(customer, -1000.0, 0.05, 12);
-        });
-    }
-
-    @Test 
-    public void testLoanWithZeroRepaymentTerm() {
-        Customer customer = new Customer("128", "Ali");
-        assertThrows(IllegalArgumentException.class, () -> {
-            Loan loan = new Loan(customer, 2000.0, 0.05, 0); // zero term
-        });
-    }
-
-    @Test
-    public void testLoanWithNegativeInterestRate() {
-        Customer customer = new Customer("129", "Fatima");
-
-        assertThrows(IllegalArgumentException.class, () -> {
-            Loan loan = new Loan(customer, 3000.0, -0.05, 12); // negative interest rate
-        });
+    void removeLoan() {
+        Loan l = loanMgr.createLoan("C9","A9",500,4,6);
+        assertTrue(loanMgr.removeLoan(l.getLoanId()));
+        assertNull(loanMgr.getLoanById(l.getLoanId()));
     }
 }

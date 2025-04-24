@@ -20,8 +20,8 @@ public class Loan {
     /**
      * Constructor for existing loans (with known ID)
      */
-    public Loan(String loanId, String customerId, String accountNumber, double loanAmount, 
-               double interestRate, int durationInMonths) {
+    public Loan(String loanId, String customerId, String accountNumber, double loanAmount,
+            double interestRate, int durationInMonths) {
         if (loanId == null || loanId.isEmpty()) {
             throw new IllegalArgumentException("Loan ID cannot be null or empty");
         }
@@ -82,7 +82,7 @@ public class Loan {
         return customerId;
     }
 
-    public String getAccountNumber() { 
+    public String getAccountNumber() {
         return accountNumber;
     }
 
