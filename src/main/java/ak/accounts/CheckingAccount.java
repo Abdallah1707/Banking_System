@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 package ak.accounts;
 
 public class CheckingAccount extends Account {
@@ -29,4 +30,35 @@ public class CheckingAccount extends Account {
     public double getOverdraftLimit() {
         return overdraftLimit;
     }
+=======
+package ak.accounts;
+
+public class CheckingAccount extends Account {
+    private double overdraftLimit = 500;
+
+    public CheckingAccount(String customerId, String accountHolderName, double initialBalance, double overdraftLimit , boolean activated) {
+        super(customerId, accountHolderName, initialBalance , activated);
+        this.overdraftLimit = overdraftLimit;
+    }
+    
+    public CheckingAccount(String customerId, String accountHolderName, double initialBalance, double overdraftLimit , String accountNumber , boolean activated) {
+        super(customerId, accountHolderName, initialBalance , accountNumber, activated);
+        this.overdraftLimit = overdraftLimit;
+    }
+
+    @Override
+    public boolean withdraw(double amount) {
+        if (amount <= balance + overdraftLimit) {
+            balance -= amount;
+            return true;
+        } else {
+            System.out.println("Overdraft limit exceeded in Checking Account.");
+            return false;
+        }
+    }
+
+    public double getOverdraftLimit() {
+        return overdraftLimit;
+    }
+>>>>>>> Stashed changes
 }

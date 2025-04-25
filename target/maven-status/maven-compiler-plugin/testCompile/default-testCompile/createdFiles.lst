@@ -1,0 +1,7 @@
+ak\CustomerAccountViewIntegrationTest.class
+ak\TransactionHistoryIntegrationTest.class
+ak\CustomerAccountLinkageIntegrationTest.class
+ak\AccountOverdraftIntegrationTest.class
+ak\CustomerLoanIntegration_TC3_1Test.class
+ak\AccountDepositIntegrationTest.class
+ak\AccountWithdrawIntegrationTest.class
